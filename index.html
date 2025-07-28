@@ -152,6 +152,34 @@
         </div>
       </div>
     </div>
+
+    <div id="importModal" class="import-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Import Data</h2>
+          <button class="close-btn" aria-label="Close">&times;</button>
+        </div>
+    <textarea
+      id="dataInput"
+      class="data-input"
+      placeholder="Enter thermal data in this format:
+      
+Manila, 34.5
+Pasig, 36.7
+Cainta, 28.3"
+    ></textarea>
+    
+    <p class="format-hint">
+      Enter one location per line in the format: <code>[Location], [Value]</code>
+    </p>
+    
+    <div class="modal-footer">
+      <button type="button" class="modal-btn cancel-btn">Cancel</button>
+      <button type="button" class="modal-btn import-btn">Import</button>
+    </div>
+        </div>
+      </div>
+    </div>
     <div id="tooltip" class="tooltip"></div>
     <script src="script.js"></script>
   </body>

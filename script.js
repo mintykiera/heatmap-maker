@@ -135,16 +135,18 @@ document.addEventListener('DOMContentLoaded', function () {
   function startDrawing(e) {
     if (e.type.startsWith('touch')) e.preventDefault();
     saveHistory();
-
     isDrawing = true;
-    const [x, y] = getEventCoordinates(e);
-    currentStrokePoints = [{ x, y }];
 
-    if (selectedStrokeId) {
-      const stroke = dataStrokes.find((s) => s.id === selectedStrokeId);
-      if (stroke) {
-        currentStrokePoints = [...stroke.points];
-      }
+    const [x, y] = getEventCoordinates(e);
+    const newPoint = { x, y };
+
+    const selectedStroke = dataStrokes.find((s) => s.id === selectedStrokeId);
+
+    if (selectedStroke) {
+      currentStrokePoints = [...selectedStroke.points, newPoint];
+    } else {
+      currentStrokePoints = [newPoint];
+      selectedStrokeId = null;
     }
   }
 
@@ -157,6 +159,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (e.type.startsWith('touch')) e.preventDefault();
     if (!isDrawing) return;
     requestAnimationFrame(() => {
+      if (currentStrokePoints.length === 0) return;
       const [x, y] = getEventCoordinates(e);
       const lastPoint = currentStrokePoints[currentStrokePoints.length - 1];
       const dx = x - lastPoint.x;
@@ -211,48 +214,90 @@ document.addEventListener('DOMContentLoaded', function () {
       dataStrokes.push(stroke);
       selectedStrokeId = stroke.id;
     }
-
+    currentStrokePoints = [];
     updateTable();
     redrawCanvas();
   }
 
   function handleImport() {
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = '.txt,.csv';
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+    const importModal = document.getElementById('importModal');
+    const closeModalBtn = importModal.querySelector('.close-btn');
+    const cancelBtn = importModal.querySelector('.cancel-btn');
+    const importDataBtn = importModal.querySelector('.import-btn');
+    const dataInput = document.getElementById('dataInput');
 
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const content = event.target.result;
-        const lines = content.split('\n');
+    const closeModal = () => {
+      importModal.classList.remove('active');
+      setTimeout(() => {
+        importModal.style.display = 'none';
+        dataInput.value = '';
+      }, 300);
 
-        lines.forEach((line) => {
-          const [zone, temp] = line.split(',');
-          if (zone && temp) {
-            const temperature = parseFloat(temp.trim());
-            if (!isNaN(temperature)) {
-              const newStroke = {
-                id: Date.now() + Math.random(),
-                name: zone.trim(),
-                temp: temperature,
-                brushSize: 40, // Default brush size
-                points: [],
-              };
-              dataStrokes.push(newStroke);
-              zoneCounter++;
+      closeModalBtn.removeEventListener('click', closeModal);
+      cancelBtn.removeEventListener('click', closeModal);
+      importDataBtn.removeEventListener('click', importDataHandler);
+      importModal.removeEventListener('click', outsideClickHandler);
+    };
+
+    const importDataHandler = () => {
+      const content = dataInput.value.trim();
+      if (!content) {
+        alert('The text area is empty. Please paste your data first.');
+        return;
+      }
+
+      const lines = content.split('\n');
+      const importTimestamp = Date.now();
+      let firstImportedStrokeId = null;
+
+      lines.forEach((line, index) => {
+        const [zone, temp] = line.split(',');
+        if (zone && temp) {
+          const temperature = parseFloat(temp.trim());
+          if (!isNaN(temperature)) {
+            const newStrokeId = importTimestamp + index;
+            const newStroke = {
+              id: newStrokeId,
+              name: zone.trim(),
+              temp: temperature,
+              brushSize: currentBrushSize,
+              points: [],
+            };
+            dataStrokes.push(newStroke);
+            if (!firstImportedStrokeId) {
+              firstImportedStrokeId = newStrokeId;
             }
           }
-        });
+        }
+      });
 
-        updateTable();
-        saveHistory();
-      };
-      reader.readAsText(file);
-    });
-    fileInput.click();
+      if (firstImportedStrokeId) {
+        handleRowSelection(firstImportedStrokeId);
+      }
+
+      zoneCounter = dataStrokes.length + 1;
+      updateTable();
+      redrawCanvas();
+      saveHistory();
+      closeModal();
+    };
+
+    const outsideClickHandler = (e) => {
+      if (e.target === importModal) {
+        closeModal();
+      }
+    };
+
+    closeModalBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+    importDataBtn.addEventListener('click', importDataHandler);
+    importModal.addEventListener('click', outsideClickHandler);
+
+    importModal.style.display = 'flex';
+    setTimeout(() => {
+      importModal.classList.add('active');
+      dataInput.focus();
+    }, 10);
   }
 
   function saveHistory() {
@@ -290,7 +335,7 @@ document.addEventListener('DOMContentLoaded', function () {
     for (const stroke of dataStrokes) {
       for (const point of stroke.points) {
         const distance = Math.sqrt((point.x - x) ** 2 + (point.y - y) ** 2);
-        if (distance < stroke.brushSize && distance < minDistance) {
+        if (distance < stroke.brushSize / 2 && distance < minDistance) {
           minDistance = distance;
           hoveredStroke = stroke;
         }
@@ -419,9 +464,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function handleTableSliderInput(e) {
     if (e.target.classList.contains('temp-slider')) {
-      const id = parseInt(e.target.dataset.id);
+      const id = parseFloat(e.target.dataset.id);
       const newTemp = parseFloat(e.target.value);
-      if (!isNaN(newTemp)) {
+      if (!isNaN(newTemp) && !isNaN(id)) {
         updateStrokeUI(id, newTemp);
       }
     }
@@ -441,6 +486,11 @@ document.addEventListener('DOMContentLoaded', function () {
       if (isNaN(newTemp)) {
         target.value = stroke.temp.toFixed(1);
         return;
+      }
+      if (stroke.id === selectedStrokeId) {
+        currentTemp = newTemp;
+        temperatureSlider.value = currentTemp;
+        tempValue.textContent = `${currentTemp.toFixed(1)}°C`;
       }
       updateStrokeUI(id, newTemp);
     }
@@ -462,6 +512,24 @@ document.addEventListener('DOMContentLoaded', function () {
     redrawCanvas();
   }
 
+  function handleRowSelection(newSelectedId) {
+    selectedStrokeId = newSelectedId;
+
+    const selectedStroke = dataStrokes.find((s) => s.id === newSelectedId);
+    if (selectedStroke) {
+      currentTemp = selectedStroke.temp;
+      temperatureSlider.value = currentTemp;
+      tempValue.textContent = `${currentTemp.toFixed(1)}°C`;
+
+      currentBrushSize = selectedStroke.brushSize;
+      brushSizeSlider.value = currentBrushSize;
+      brushSizeValue.textContent = `${currentBrushSize}px`;
+    }
+
+    updateTable();
+    redrawCanvas();
+  }
+
   function handleTableClick(e) {
     e.stopPropagation();
     const button = e.target.closest('button.action-btn');
@@ -469,10 +537,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (button) {
       saveHistory();
-      const { id } = button.dataset;
-      const strokeId = parseInt(id);
+      const strokeId = parseInt(button.dataset.id);
       dataStrokes = dataStrokes.filter((s) => s.id !== strokeId);
-      if (selectedStrokeId === strokeId) selectedStrokeId = null;
+      if (selectedStrokeId === strokeId) {
+        selectedStrokeId = null;
+      }
       updateTable();
       redrawCanvas();
       return;
@@ -482,6 +551,18 @@ document.addEventListener('DOMContentLoaded', function () {
       const newSelectedId = parseInt(row.dataset.strokeId);
       if (selectedStrokeId !== newSelectedId) {
         selectedStrokeId = newSelectedId;
+
+        const selectedStroke = dataStrokes.find((s) => s.id === newSelectedId);
+        if (selectedStroke) {
+          currentTemp = selectedStroke.temp;
+          temperatureSlider.value = currentTemp;
+          tempValue.textContent = `${currentTemp.toFixed(1)}°C`;
+
+          currentBrushSize = selectedStroke.brushSize;
+          brushSizeSlider.value = currentBrushSize;
+          brushSizeValue.textContent = `${currentBrushSize}px`;
+        }
+
         updateTable();
         redrawCanvas();
       }
@@ -627,7 +708,7 @@ document.addEventListener('DOMContentLoaded', function () {
         ],
       },
     ];
-    if (dataStrokes.length > 0) selectedStrokeId = dataStrokes[0].id;
+    if (dataStrokes.length > 0) handleRowSelection(dataStrokes[0].id);
     redrawCanvas();
     updateTable();
   }

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Infrared Heatmap Generator</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1><i class="fas fa-fire"></i> Infrared Heatmap Generator</h1>
+        <p class="subtitle">
+          Create professional thermal visualizations with an intuitive,
+          optimized interface
+        </p>
+      </header>
+
+      <div class="performance">
+        <div>Zones: <span class="temp-value" id="zoneCounter">0</span></div>
+        <div>
+          Total Points: <span class="temp-value" id="pointCounter">0</span>
+        </div>
+        <div>FPS: <span class="temp-value" id="fpsCounter">0</span></div>
+      </div>
+
+      <div class="main-content">
+        <div class="panel left-panel">
+          <h2 class="panel-title">
+            <i class="fas fa-image"></i> Thermal Canvas
+          </h2>
+
+          <div class="upload-area" id="uploadArea">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <h3>Upload Infrared Image</h3>
+            <p>Click here or drag & drop your thermal image</p>
+            <input
+              type="file"
+              id="imageUpload"
+              accept="image/*"
+              style="display: none"
+            />
+          </div>
+
+          <div class="canvas-container">
+            <canvas id="heatmapCanvas"></canvas>
+          </div>
+
+          <div class="controls">
+            <button class="btn" id="clearBtn">
+              <i class="fas fa-trash-alt"></i> Clear All
+            </button>
+            <button class="btn" id="undoBtn">
+              <i class="fas fa-undo"></i> Undo
+            </button>
+          </div>
+
+          <div class="drawing-controls">
+            <div class="slider-container">
+              <div class="slider-label">
+                <span>Brush Size</span>
+                <span class="temp-value" id="brushSizeValue">30px</span>
+              </div>
+              <input type="range" id="brushSize" min="10" max="80" value="30" />
+            </div>
+
+            <div class="slider-container">
+              <div class="slider-label">
+                <span>Temperature (°C)</span>
+                <span class="temp-value" id="tempValue">25°C</span>
+              </div>
+              <input
+                type="range"
+                id="temperature"
+                min="0"
+                max="100"
+                value="25"
+              />
+            </div>
+          </div>
+
+          <div class="cluster-info">
+            <i class="fas fa-lightbulb"></i> Click to plot a point, or drag to
+            draw a thermal zone.
+          </div>
+        </div>
+
+        <div class="panel right-panel">
+          <h2 class="panel-title"><i class="fas fa-table"></i> Thermal Data</h2>
+
+          <div class="data-table">
+            <table id="dataTable">
+              <thead>
+                <tr>
+                  <th>Zone Name</th>
+                  <th>Temp (°C)</th>
+                  <th>Temp (°F)</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+
+          <div class="instructions">
+            <h3><i class="fas fa-info-circle"></i> How to Use:</h3>
+            <ul>
+              <li>
+                <strong>Upload an image</strong> to serve as your background.
+              </li>
+              <li>Click or drag on the canvas to create thermal zones.</li>
+              <li>Adjust temperature and brush size using the sliders.</li>
+              <li>Click a zone in the table to select it for editing.</li>
+              <li>Export your final heatmap and data summary.</li>
+            </ul>
+          </div>
+
+          <div class="legend">
+            <div class="legend-title">Thermal Color Scale</div>
+            <div class="legend-gradient-bar"></div>
+            <div class="legend-labels" id="legendLabels"></div>
+            <div class="legend-controls">
+              <div class="temp-range-input">
+                <label for="minTemp">Min °C</label>
+                <input type="number" id="minTemp" value="0" />
+              </div>
+              <div class="temp-range-input">
+                <label for="maxTemp">Max °C</label>
+                <input type="number" id="maxTemp" value="100" />
+              </div>
+            </div>
+          </div>
+
+          <div class="controls">
+            <button class="btn" id="importBtn">
+              <i class="fas fa-file-import"></i> Import Data
+            </button>
+            <button class="btn" id="exportBtn">
+              <i class="fas fa-file-export"></i> Export to txt
+            </button>
+            <button id="exportImageBtn" class="btn">
+              <i class="fas fa-file-image"></i> Export as PNG
+            </button>
+            <button class="btn" id="sampleBtn">
+              <i class="fas fa-bolt"></i> Generate Sample
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="tooltip" class="tooltip"></div>
+    <script src="script.js"></script>
+  </body>
+</html>
